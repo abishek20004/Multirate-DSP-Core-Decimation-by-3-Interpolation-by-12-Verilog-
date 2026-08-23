@@ -2,7 +2,7 @@
 
 Technical assessment submission for ApexPlus Technologies
 
-# 1. Project Overview
+# Project Overview
 
 This project implements and verifies a multirate DSP signal-processing chain using Xilinx FIR Compiler IP cores and Verilog HDL.
 
@@ -39,3 +39,12 @@ The system performs:
                     │
                     ▼
              Final Output
+```
+
+## IP Specifications
+
+![](IP_configuratio/dec_3.png)
+![](IP_configuratio/interp_12.png)
+
+
+
