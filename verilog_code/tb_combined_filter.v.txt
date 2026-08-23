@@ -1,0 +1,320 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 22.08.2026 20:46:37
+// Design Name: 
+// Module Name: tb_combined
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+
+`timescale 1ns / 1ps
+
+module tb_combined_filter;
+
+    // ============================================================
+    // CLOCK
+    // ============================================================
+    reg aclk;
+
+    // ============================================================
+    // INPUT AXI4-STREAM
+    // 16-bit signed Q1.15
+    // ============================================================
+    reg         s_axis_data_tvalid;
+    wire        s_axis_data_tready;
+    reg  [15:0] s_axis_data_tdata;
+
+    // ============================================================
+    // FINAL OUTPUT
+    // ============================================================
+    wire        m_axis_data_tvalid;
+    wire [63:0] m_axis_data_tdata;
+
+    // ============================================================
+    // FILE HANDLES
+    // ============================================================
+    integer infile;
+    integer dec_outfile;
+    integer interp_outfile;
+
+    integer sample;
+    integer status;
+    integer sample_count;
+
+    // ============================================================
+    // DUT
+    // ============================================================
+    combined_filter dut (
+
+        .aclk                 (aclk),
+
+        .s_axis_data_tvalid   (s_axis_data_tvalid),
+        .s_axis_data_tready   (s_axis_data_tready),
+        .s_axis_data_tdata    (s_axis_data_tdata),
+
+        .m_axis_data_tvalid   (m_axis_data_tvalid),
+        .m_axis_data_tdata    (m_axis_data_tdata)
+    );
+
+
+    // ============================================================
+    // 120 MHz CLOCK
+    //
+    // Period = 8.333 ns
+    // ============================================================
+    initial begin
+
+        aclk = 1'b0;
+
+        forever begin
+            #4.1665 aclk = ~aclk;
+        end
+
+    end
+
+
+    // ============================================================
+    // INPUT + FILE INITIALIZATION
+    // ============================================================
+    initial begin
+
+        // --------------------------------------------------------
+        // Initial values
+        // --------------------------------------------------------
+        s_axis_data_tvalid = 1'b0;
+        s_axis_data_tdata  = 16'd0;
+
+        sample_count = 0;
+
+
+        // --------------------------------------------------------
+        // Open input file
+        // --------------------------------------------------------
+        infile = $fopen(
+            "C:/Vivado_projects/project_2/input_sine_q15.txt",
+            "r"
+        );
+
+        if (infile == 0) begin
+            $display("ERROR: Cannot open input_sine_q15.txt");
+            $finish;
+        end
+
+
+        // --------------------------------------------------------
+        // Open decimator output file
+        //
+        // 24-bit signed decimator output
+        // --------------------------------------------------------
+        dec_outfile = $fopen(
+            "C:/Vivado_projects/project_2/decimated_output.txt",
+            "w"
+        );
+
+        if (dec_outfile == 0) begin
+            $display("ERROR: Cannot open decimated_output.txt");
+            $finish;
+        end
+
+
+        // --------------------------------------------------------
+        // Open interpolator output file
+        //
+        // Four 16-bit Q1.15 samples per line
+        // --------------------------------------------------------
+        interp_outfile = $fopen(
+            "C:/Vivado_projects/project_2/interpolated_output.txt",
+            "w"
+        );
+
+        if (interp_outfile == 0) begin
+            $display("ERROR: Cannot open interpolated_output.txt");
+            $finish;
+        end
+
+
+        $display("==============================================");
+        $display(" Combined Decimator + Interpolator Simulation ");
+        $display("==============================================");
+
+
+        // --------------------------------------------------------
+        // Wait before starting
+        // --------------------------------------------------------
+        repeat (10)
+            @(posedge aclk);
+
+
+        // ========================================================
+        // READ INPUT SAMPLES
+        // ========================================================
+
+        while (!$feof(infile)) begin
+
+            status = $fscanf(infile, "%d\n", sample);
+
+            if (status == 1) begin
+
+                // ------------------------------------------------
+                // Wait until decimator is ready
+                // ------------------------------------------------
+                while (!s_axis_data_tready)
+                    @(posedge aclk);
+
+
+                // ------------------------------------------------
+                // Put input data on bus before rising edge
+                // ------------------------------------------------
+                @(negedge aclk);
+
+                s_axis_data_tdata  = sample[15:0];
+                s_axis_data_tvalid = 1'b1;
+
+                sample_count = sample_count + 1;
+
+
+                // ------------------------------------------------
+                // Wait for transfer
+                // ------------------------------------------------
+                @(posedge aclk);
+
+                while (!s_axis_data_tready)
+                    @(posedge aclk);
+
+
+                // ------------------------------------------------
+                // Deassert valid
+                // ------------------------------------------------
+                @(negedge aclk);
+
+                s_axis_data_tvalid = 1'b0;
+
+            end
+
+        end
+
+
+        // ========================================================
+        // FINISH INPUT
+        // ========================================================
+
+        @(negedge aclk);
+
+        s_axis_data_tvalid = 1'b0;
+        s_axis_data_tdata  = 16'd0;
+
+        $display("----------------------------------------------");
+        $display("Input samples sent = %0d", sample_count);
+        $display("----------------------------------------------");
+
+
+        // ========================================================
+        // WAIT FOR FIR PIPELINES
+        // ========================================================
+
+        repeat (1000)
+            @(posedge aclk);
+
+
+        // ========================================================
+        // CLOSE FILES
+        // ========================================================
+
+        $fclose(infile);
+        $fclose(dec_outfile);
+        $fclose(interp_outfile);
+
+
+        $display("==============================================");
+        $display("Simulation Finished");
+        $display("==============================================");
+
+        $finish;
+
+    end
+
+
+    // ============================================================
+    // CAPTURE DECIMATOR OUTPUT
+    //
+    // dec_3:
+    //
+    // m_axis_data_tvalid
+    // m_axis_data_tdata = 24 bits
+    //
+    // Only write when dec_valid = 1.
+    // ============================================================
+
+    always @(posedge aclk) begin
+
+        if (dut.dec_valid) begin
+
+            $fwrite(
+                dec_outfile,
+                "%0d\n",
+                $signed(dut.dec_data)
+            );
+
+            $display(
+                "DEC OUT = %0d",
+                $signed(dut.dec_data)
+            );
+
+        end
+
+    end
+
+
+    // ============================================================
+    // CAPTURE INTERPOLATOR OUTPUT
+    //
+    // 64-bit output:
+    //
+    // [15:0]   = sample 0
+    // [31:16]  = sample 1
+    // [47:32]  = sample 2
+    // [63:48]  = sample 3
+    //
+    // Each final sample is treated as 16-bit Q1.15.
+    // ============================================================
+
+    always @(posedge aclk) begin
+
+        if (m_axis_data_tvalid) begin
+
+            $fwrite(
+                interp_outfile,
+                "%0d %0d %0d %0d\n",
+                $signed(m_axis_data_tdata[15:0]),
+                $signed(m_axis_data_tdata[31:16]),
+                $signed(m_axis_data_tdata[47:32]),
+                $signed(m_axis_data_tdata[63:48])
+            );
+
+            $display(
+                "INTERP OUT = %0d  %0d  %0d  %0d",
+                $signed(m_axis_data_tdata[15:0]),
+                $signed(m_axis_data_tdata[31:16]),
+                $signed(m_axis_data_tdata[47:32]),
+                $signed(m_axis_data_tdata[63:48])
+            );
+
+        end
+
+    end
+
+endmodule
