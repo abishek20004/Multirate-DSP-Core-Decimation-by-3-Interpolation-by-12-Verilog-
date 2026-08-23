@@ -1,1 +1,19 @@
+clear; clc; close all;
 
+%% Parameters
+Fs   = 120e6;          % Sampling frequency 120 MHz
+f    = 1e6;            % Signal frequency 1 MHz
+amp  = 0.999;          % Amplitude almost full-scale
+dur  = 50e-6;          % 50 µs duration (enough to see several cycles clearly)
+                       % Change to 200e-6 if you want longer file for simulation
+
+t    = 0 : 1/Fs : dur-1/Fs;
+sine = amp * sin(2*pi*f*t);
+
+%% Convert to Q1.15 (16-bit signed)
+q15  = int16(round(sine * 32767));
+
+%% Save to text file for Verilog test-bench
+fid = fopen('input_sine_q15.txt','w');
+fprintf(fid,'%d\n', q15);
+fclose(fid);
