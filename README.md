@@ -51,3 +51,21 @@ The design performs **decimation by 3** followed by **interpolation by 12**, con
                     ▼
               Final Output
            (packed 64-bit Q1.15)
+```
+## Key Features
+
+1. Xilinx FIR Compiler polyphase decimator (factor 3) and interpolator (factor 12)
+2. AXI4-Stream interfaces throughout
+3. Fixed-point arithmetic with careful Q-format management
+4. 51-tap low-pass FIR filters (Hamming window design)
+5. Complete testbench with file-based stimulus and result capture
+6. MATLAB-based frequency-domain verification (FFT analysis)
+7. Simulation results and plots included
+
+## Filter Specifications
+## Decimator (dec_3)
+![Decimator (dec_3)](IP_configuratio/dec_3.png)
+## Interpolator (interp_12)
+![Interpolator (interp_12)](IP_configuratio/interp_12.png)
+
+## Fixed-Point Handling
