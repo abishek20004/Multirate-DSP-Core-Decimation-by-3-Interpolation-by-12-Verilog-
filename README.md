@@ -39,15 +39,3 @@ The system performs:
                     │
                     ▼
              Final Output
-
-The overall sampling-rate conversion is:
-
-120 MHz
-   │
-   │ Decimation by 3
-   ▼
-40 MHz
-   │
-   │ Interpolation by 12
-   ▼
-480 MHz
