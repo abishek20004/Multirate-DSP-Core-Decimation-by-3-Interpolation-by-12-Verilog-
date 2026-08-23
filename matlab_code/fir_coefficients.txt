@@ -1,0 +1,23 @@
+%% 1. Filter Specifications
+Fs      = 120e6;          % Sampling frequency (Hz)
+Fc      = 15e6;           % Cut-off frequency (Hz)
+N       = 51;             % Number of taps (odd → integer group delay)
+
+%% 2. Design FIR filter with Hamming window
+% fir1 designs a linear-phase FIR filter
+% Normalized frequency = Fc / (Fs/2)
+b = fir1(N-1, Fc/(Fs/2), 'low', hamming(N));
+
+%% 3. Round coefficients to 3 decimal places
+b_rounded = round(b, 3);          % MATLAB R2014b and later
+% For older MATLAB versions use:
+% b_rounded = round(b * 1000) / 1000;
+
+%% 4. Display results
+fprintf('Number of taps          : %d\n', N);
+fprintf('Cut-off frequency       : %.1f MHz\n', Fc/1e6);
+fprintf('Sampling frequency      : %.1f MHz\n', Fs/1e6);
+fprintf('DC gain (sum of coeffs) : %.6f\n\n', sum(b_rounded));
+
+disp('Rounded coefficients (3 decimal places):');
+disp(b_rounded.');
