@@ -1,0 +1,24 @@
+%% Interpolation FIR coefficient generation
+
+Fs_in  = 40e6;
+L      = 12;
+Fs_out = Fs_in * L;
+
+Fc     = 15e6;
+Ntaps  = 51;
+
+%% Normalized cutoff frequency
+Wn = Fc / (Fs_out/2);
+
+fprintf('Input Fs       = %.2f MHz\n', Fs_in/1e6);
+fprintf('Interpolation  = %d\n', L);
+fprintf('Output Fs      = %.2f MHz\n', Fs_out/1e6);
+fprintf('Cutoff         = %.2f MHz\n', Fc/1e6);
+fprintf('Normalized Fc  = %.6f\n', Wn);
+
+%% Generate 51-tap Hamming-window FIR
+h = fir1(Ntaps-1, Wn, 'low', hamming(Ntaps));
+
+%% Display floating-point coefficients
+disp('Floating-point coefficients:');
+disp(h.');
