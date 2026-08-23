@@ -1,50 +1,53 @@
-# Multirate-DSP-Core-Decimation-by-3-Interpolation-by-12-Verilog-
+# Multirate DSP Core – Decimation by 3 + Interpolation by 12 (Verilog)
 
-Technical assessment submission for ApexPlus Technologies
+**Technical assessment submission for ApexPlus Technologies**
 
-# Project Overview
+This repository implements and verifies a complete multirate DSP signal-processing chain using **Xilinx FIR Compiler IP cores** and custom Verilog HDL.  
+The design performs **decimation by 3** followed by **interpolation by 12**, converting a 120 MHz input stream into a 480 MHz output stream while preserving signal integrity in fixed-point arithmetic.
 
-This project implements and verifies a multirate DSP signal-processing chain using Xilinx FIR Compiler IP cores and Verilog HDL.
+---
 
-The system performs:
+## System Overview
 
-1. Input signal generation in Q1.15 fixed-point format
-2. Decimation by 3
-3. Interpolation by 12
-4. Fixed-point format conversion at the output
-5. Simulation using Vivado
-6. Frequency-domain verification using MATLAB FFT analysis
+| Stage              | Rate Change | Sampling Frequency | Data Format          |
+|--------------------|-------------|--------------------|----------------------|
+| Input              | –           | 120 MHz            | 16-bit Q1.15        |
+| FIR Decimator      | ÷ 3         | 40 MHz             | 24-bit intermediate |
+| Format Conversion  | –           | 40 MHz             | 16-bit Q1.15        |
+| FIR Interpolator   | × 12        | 480 MHz            | 64-bit packed (4×16-bit) |
+| Final Output       | –           | 480 MHz            | 4 × 16-bit Q1.15    |
 
-## System Architecture
+**Overall rate conversion factor**: 12 / 3 = **4×**
+
+### Architecture Diagram
 
 ```text
                 Input Signal
                  120 MHz
+                (Q1.15)
                     │
                     ▼
             ┌────────────────┐
-            │ FIR Decimator  │
-            │       /3       │
+            │  FIR Decimator │  ÷ 3
+            │   (51-tap LPF) │
             └───────┬────────┘
                     │
                   40 MHz
                     │
                     ▼
             ┌────────────────┐
-            │ FIR Interpolator│
-            │      ×12        │
+            │ Format Convert │  24-bit → 16-bit Q1.15
+            └───────┬────────┘
+                    │
+                    ▼
+            ┌────────────────┐
+            │ FIR Interpolator│  × 12
+            │  (51-tap LPF)  │
             └───────┬────────┘
                     │
                  480 MHz
+              (4× parallel samples)
                     │
                     ▼
-             Final Output
-```
-
-## IP Specifications
-
-![](IP_configuratio/dec_3.png)
-![](IP_configuratio/interp_12.png)
-
-
-
+              Final Output
+           (packed 64-bit Q1.15)
